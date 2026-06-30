@@ -80,6 +80,7 @@ export async function addExpense(
   const expense: Expense = {
     ...input,
     id: crypto.randomUUID(),
+    createdAt: input.createdAt ?? new Date().toISOString(),
     chfValue:
       input.chfValue ??
       computeChfValue(input.amount, input.currency, settings.eurToChfRate),
@@ -149,10 +150,12 @@ export async function bulkImportExpenses(rows: ParsePreviewRow[]): Promise<numbe
   const settings = await getSettings()
   const expenses: Expense[] = []
 
-  for (const row of rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
     if (row.status !== 'valid' || row.type !== 'expense') continue
     if (!row.date || row.amount == null || !row.category) continue
 
+    const dayBase = new Date(`${row.date}T12:00:00.000Z`).getTime()
     expenses.push({
       id: crypto.randomUUID(),
       date: row.date,
@@ -161,6 +164,7 @@ export async function bulkImportExpenses(rows: ParsePreviewRow[]): Promise<numbe
       category: row.category,
       note: row.category,
       source: 'import',
+      createdAt: new Date(dayBase + i).toISOString(),
       chfValue: computeChfValue(
         row.amount,
         row.currency ?? 'CHF',

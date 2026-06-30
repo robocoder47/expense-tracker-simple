@@ -11,6 +11,8 @@ export interface Expense {
   category: string
   note: string
   source: ExpenseSource
+  /** ISO timestamp — used for within-day list order (newest last). */
+  createdAt?: string
 }
 
 export interface FixedCost {

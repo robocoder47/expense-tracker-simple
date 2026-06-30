@@ -1,6 +1,14 @@
 import type { Expense } from './types'
 import { monthKey, sumChf } from './calculations'
 
+function expenseSortKey(e: Expense): string {
+  return e.createdAt ?? `${e.date}T00:00:00.000Z`
+}
+
+function sortExpensesChronological(expenses: Expense[]): Expense[] {
+  return [...expenses].sort((a, b) => expenseSortKey(a).localeCompare(expenseSortKey(b)))
+}
+
 export interface DayGroup {
   date: string
   expenses: Expense[]
@@ -32,7 +40,7 @@ export function groupExpensesByMonth(expenses: Expense[]): MonthGroup[] {
         .sort((a, b) => b[0].localeCompare(a[0]))
         .map(([date, dayExpenses]) => ({
           date,
-          expenses: dayExpenses.sort((a, b) => b.chfValue - a.chfValue),
+          expenses: sortExpensesChronological(dayExpenses),
           total: sumChf(dayExpenses),
         }))
       const all = days.flatMap((d) => d.expenses)
