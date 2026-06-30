@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: Settings = {
   gbpToChfRate: 1.12,
   fxRatesUpdatedAt: null,
   fxRatesDate: null,
+  fxRatesSource: null,
   lastBackupAt: null,
   foodBudget: 1000,
   seededAt: null,

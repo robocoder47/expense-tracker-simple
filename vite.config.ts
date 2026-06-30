@@ -34,19 +34,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/api\.frankfurter\.dev\/.*/i,
-            handler: 'NetworkOnly',
-            options: { cacheName: 'fx-frankfurter' },
-          },
-          {
-            urlPattern: /^https:\/\/open\.er-api\.com\/.*/i,
-            handler: 'NetworkOnly',
-            options: { cacheName: 'fx-er-api' },
-          },
-        ],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
       },
     }),
   ],

@@ -40,6 +40,7 @@ export interface Settings {
   fxRatesUpdatedAt: string | null
   /** ECB date from the rates provider (YYYY-MM-DD). */
   fxRatesDate: string | null
+  fxRatesSource: string | null
   lastBackupAt: string | null
   foodBudget: number
   seededAt: string | null

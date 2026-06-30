@@ -1,11 +1,21 @@
 import { roundChf } from './calculations'
 import { getSettings, updateSettings } from './db'
 
+const LOCAL_RATES_URL = `${import.meta.env.BASE_URL}rates.json`
 const FRANKFURTER_URL = 'https://api.frankfurter.dev/v1/latest?from=CHF&to=EUR,USD,GBP'
 const FALLBACK_URL = 'https://open.er-api.com/v6/latest/CHF'
 const STALE_MS = 24 * 60 * 60 * 1000
+const FETCH_TIMEOUT_MS = 12_000
 
 let refreshInFlight: Promise<{ updated: boolean }> | null = null
+
+export type FxPayload = {
+  eurToChfRate: number
+  usdToChfRate: number
+  gbpToChfRate: number
+  fxRatesDate: string
+  fxRatesSource?: string
+}
 
 function ratesAreStale(updatedAt: string | null | undefined): boolean {
   if (!updatedAt) return true
@@ -16,13 +26,43 @@ function chfPerUnit(chfToForeign: number): number {
   return roundChf(1 / chfToForeign)
 }
 
-async function fetchFromFrankfurter(): Promise<{
-  eurToChfRate: number
-  usdToChfRate: number
-  gbpToChfRate: number
-  fxRatesDate: string
-}> {
-  const res = await fetch(FRANKFURTER_URL, { cache: 'no-store' })
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  try {
+    return await fetch(url, { cache: 'no-store', signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function fetchFromLocalRates(): Promise<FxPayload & { source: string }> {
+  const res = await fetchWithTimeout(`${LOCAL_RATES_URL}?t=${Date.now()}`)
+  if (!res.ok) throw new Error(`local rates ${res.status}`)
+
+  const data = (await res.json()) as {
+    fxRatesDate: string | null
+    eurToChfRate: number
+    usdToChfRate: number
+    gbpToChfRate: number
+    source?: string
+  }
+
+  if (!data.eurToChfRate || !data.usdToChfRate || !data.gbpToChfRate) {
+    throw new Error('local rates incomplete')
+  }
+
+  return {
+    eurToChfRate: data.eurToChfRate,
+    usdToChfRate: data.usdToChfRate,
+    gbpToChfRate: data.gbpToChfRate,
+    fxRatesDate: data.fxRatesDate ?? new Date().toISOString().slice(0, 10),
+    source: data.source ?? 'bundled',
+  }
+}
+
+async function fetchFromFrankfurter(): Promise<FxPayload & { source: string }> {
+  const res = await fetchWithTimeout(FRANKFURTER_URL)
   if (!res.ok) throw new Error(`frankfurter ${res.status}`)
 
   const data = (await res.json()) as {
@@ -38,16 +78,12 @@ async function fetchFromFrankfurter(): Promise<{
     usdToChfRate: chfPerUnit(USD),
     gbpToChfRate: chfPerUnit(GBP),
     fxRatesDate: data.date,
+    source: 'ecb-live',
   }
 }
 
-async function fetchFromOpenErApi(): Promise<{
-  eurToChfRate: number
-  usdToChfRate: number
-  gbpToChfRate: number
-  fxRatesDate: string
-}> {
-  const res = await fetch(FALLBACK_URL, { cache: 'no-store' })
+async function fetchFromOpenErApi(): Promise<FxPayload & { source: string }> {
+  const res = await fetchWithTimeout(FALLBACK_URL)
   if (!res.ok) throw new Error(`er-api ${res.status}`)
 
   const data = (await res.json()) as {
@@ -66,21 +102,35 @@ async function fetchFromOpenErApi(): Promise<{
     usdToChfRate: chfPerUnit(USD),
     gbpToChfRate: chfPerUnit(GBP),
     fxRatesDate: new Date(data.time_last_update_unix * 1000).toISOString().slice(0, 10),
+    source: 'er-api-live',
   }
 }
 
-async function fetchLiveRates(): Promise<{
-  eurToChfRate: number
-  usdToChfRate: number
-  gbpToChfRate: number
-  fxRatesDate: string
-}> {
-  try {
-    return await fetchFromFrankfurter()
-  } catch (primaryErr) {
-    console.warn('[fx] frankfurter failed, trying fallback:', primaryErr)
-    return await fetchFromOpenErApi()
+async function fetchLiveRates(): Promise<FxPayload & { source: string }> {
+  const attempts = [fetchFromLocalRates, fetchFromFrankfurter, fetchFromOpenErApi]
+  let lastErr: unknown
+
+  for (const attempt of attempts) {
+    try {
+      return await attempt()
+    } catch (err) {
+      lastErr = err
+      console.warn('[fx] attempt failed:', err)
+    }
   }
+
+  throw lastErr ?? new Error('all fx sources failed')
+}
+
+async function saveRates(rates: FxPayload & { source: string }): Promise<void> {
+  await updateSettings({
+    eurToChfRate: rates.eurToChfRate,
+    usdToChfRate: rates.usdToChfRate,
+    gbpToChfRate: rates.gbpToChfRate,
+    fxRatesDate: rates.fxRatesDate,
+    fxRatesSource: rates.source,
+    fxRatesUpdatedAt: new Date().toISOString(),
+  })
 }
 
 export async function refreshFxRatesIfNeeded(): Promise<{ updated: boolean }> {
@@ -94,10 +144,7 @@ export async function refreshFxRatesIfNeeded(): Promise<{ updated: boolean }> {
 
     try {
       const rates = await fetchLiveRates()
-      await updateSettings({
-        ...rates,
-        fxRatesUpdatedAt: new Date().toISOString(),
-      })
+      await saveRates(rates)
       return { updated: true }
     } catch (err) {
       console.warn('[fx] using cached rates:', err)
@@ -110,16 +157,13 @@ export async function refreshFxRatesIfNeeded(): Promise<{ updated: boolean }> {
   return refreshInFlight
 }
 
-export async function forceRefreshFxRates(): Promise<boolean> {
+export async function forceRefreshFxRates(): Promise<{ ok: boolean; source?: string }> {
   try {
     const rates = await fetchLiveRates()
-    await updateSettings({
-      ...rates,
-      fxRatesUpdatedAt: new Date().toISOString(),
-    })
-    return true
+    await saveRates(rates)
+    return { ok: true, source: rates.source }
   } catch (err) {
     console.warn('[fx] manual refresh failed:', err)
-    return false
+    return { ok: false }
   }
 }

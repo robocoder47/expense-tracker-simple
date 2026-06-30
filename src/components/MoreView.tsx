@@ -28,6 +28,7 @@ export function MoreView({
     gbpToChfRate: 1.12,
     fxRatesUpdatedAt: null,
     fxRatesDate: null,
+    fxRatesSource: null,
     lastBackupAt: null,
     foodBudget: 1000,
     seededAt: null,
@@ -66,16 +67,16 @@ export function MoreView({
     setRefreshingRates(true)
     setRatesMsg(null)
     try {
-      const ok = await forceRefreshFxRates()
-      if (ok) {
+      const result = await forceRefreshFxRates()
+      if (result.ok) {
         onRatesUpdated?.()
         setRatesMsg('rates updated')
       } else {
-        setRatesMsg('could not fetch rates — using cached')
+        setRatesMsg('update failed — still using saved rates')
       }
     } finally {
       setRefreshingRates(false)
-      setTimeout(() => setRatesMsg(null), 2500)
+      setTimeout(() => setRatesMsg(null), 3000)
     }
   }
 
@@ -106,7 +107,7 @@ export function MoreView({
 
       <div className="card">
         <p className="section-title">exchange rates</p>
-        <p className="rates-note">auto-updated daily (ECB data)</p>
+        <p className="rates-note">auto-updated daily from your site (no external API needed)</p>
         <ul className="rates-list">
           <li>
             <span>1 EUR</span>
