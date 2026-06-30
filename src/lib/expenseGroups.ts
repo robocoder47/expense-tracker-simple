@@ -5,8 +5,8 @@ function expenseSortKey(e: Expense): string {
   return e.createdAt ?? `${e.date}T00:00:00.000Z`
 }
 
-function sortExpensesChronological(expenses: Expense[]): Expense[] {
-  return [...expenses].sort((a, b) => expenseSortKey(a).localeCompare(expenseSortKey(b)))
+function sortExpensesNewestFirst(expenses: Expense[]): Expense[] {
+  return [...expenses].sort((a, b) => expenseSortKey(b).localeCompare(expenseSortKey(a)))
 }
 
 export interface DayGroup {
@@ -40,7 +40,7 @@ export function groupExpensesByMonth(expenses: Expense[]): MonthGroup[] {
         .sort((a, b) => b[0].localeCompare(a[0]))
         .map(([date, dayExpenses]) => ({
           date,
-          expenses: sortExpensesChronological(dayExpenses),
+          expenses: sortExpensesNewestFirst(dayExpenses),
           total: sumChf(dayExpenses),
         }))
       const all = days.flatMap((d) => d.expenses)
