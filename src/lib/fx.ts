@@ -1,7 +1,8 @@
 import { roundChf } from './calculations'
 import { getSettings, updateSettings } from './db'
 
-const FRANKFURTER_URL = 'https://api.frankfurter.app/latest?from=CHF&to=EUR,USD,GBP'
+const FRANKFURTER_URL = 'https://api.frankfurter.dev/v1/latest?from=CHF&to=EUR,USD,GBP'
+const FALLBACK_URL = 'https://open.er-api.com/v6/latest/CHF'
 const STALE_MS = 24 * 60 * 60 * 1000
 
 let refreshInFlight: Promise<{ updated: boolean }> | null = null
@@ -11,14 +12,18 @@ function ratesAreStale(updatedAt: string | null | undefined): boolean {
   return Date.now() - new Date(updatedAt).getTime() >= STALE_MS
 }
 
-async function fetchLiveRates(): Promise<{
+function chfPerUnit(chfToForeign: number): number {
+  return roundChf(1 / chfToForeign)
+}
+
+async function fetchFromFrankfurter(): Promise<{
   eurToChfRate: number
   usdToChfRate: number
   gbpToChfRate: number
   fxRatesDate: string
 }> {
-  const res = await fetch(FRANKFURTER_URL)
-  if (!res.ok) throw new Error(`fx fetch failed: ${res.status}`)
+  const res = await fetch(FRANKFURTER_URL, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`frankfurter ${res.status}`)
 
   const data = (await res.json()) as {
     date: string
@@ -26,13 +31,55 @@ async function fetchLiveRates(): Promise<{
   }
 
   const { EUR, USD, GBP } = data.rates
-  if (!EUR || !USD || !GBP) throw new Error('fx response missing rates')
+  if (!EUR || !USD || !GBP) throw new Error('frankfurter missing rates')
 
   return {
-    eurToChfRate: roundChf(1 / EUR),
-    usdToChfRate: roundChf(1 / USD),
-    gbpToChfRate: roundChf(1 / GBP),
+    eurToChfRate: chfPerUnit(EUR),
+    usdToChfRate: chfPerUnit(USD),
+    gbpToChfRate: chfPerUnit(GBP),
     fxRatesDate: data.date,
+  }
+}
+
+async function fetchFromOpenErApi(): Promise<{
+  eurToChfRate: number
+  usdToChfRate: number
+  gbpToChfRate: number
+  fxRatesDate: string
+}> {
+  const res = await fetch(FALLBACK_URL, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`er-api ${res.status}`)
+
+  const data = (await res.json()) as {
+    result: string
+    time_last_update_unix: number
+    rates: { EUR: number; USD: number; GBP: number }
+  }
+
+  if (data.result !== 'success') throw new Error('er-api failed')
+
+  const { EUR, USD, GBP } = data.rates
+  if (!EUR || !USD || !GBP) throw new Error('er-api missing rates')
+
+  return {
+    eurToChfRate: chfPerUnit(EUR),
+    usdToChfRate: chfPerUnit(USD),
+    gbpToChfRate: chfPerUnit(GBP),
+    fxRatesDate: new Date(data.time_last_update_unix * 1000).toISOString().slice(0, 10),
+  }
+}
+
+async function fetchLiveRates(): Promise<{
+  eurToChfRate: number
+  usdToChfRate: number
+  gbpToChfRate: number
+  fxRatesDate: string
+}> {
+  try {
+    return await fetchFromFrankfurter()
+  } catch (primaryErr) {
+    console.warn('[fx] frankfurter failed, trying fallback:', primaryErr)
+    return await fetchFromOpenErApi()
   }
 }
 

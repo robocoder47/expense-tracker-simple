@@ -71,7 +71,7 @@ export function MoreView({
         onRatesUpdated?.()
         setRatesMsg('rates updated')
       } else {
-        setRatesMsg('offline — using cached rates')
+        setRatesMsg('could not fetch rates — using cached')
       }
     } finally {
       setRefreshingRates(false)
@@ -106,7 +106,7 @@ export function MoreView({
 
       <div className="card">
         <p className="section-title">exchange rates</p>
-        <p className="rates-note">auto-updated daily (ECB via frankfurter.app)</p>
+        <p className="rates-note">auto-updated daily (ECB data)</p>
         <ul className="rates-list">
           <li>
             <span>1 EUR</span>
