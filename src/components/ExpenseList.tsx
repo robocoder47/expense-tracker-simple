@@ -26,7 +26,11 @@ export function ExpenseList({ refreshKey }: ExpenseListProps) {
   }, [groups])
 
   async function handleDelete(id: string) {
-    await deleteExpense(id)
+    try {
+      await deleteExpense(id)
+    } catch (err) {
+      console.error('[delete]', err)
+    }
   }
 
   function toggleMonth(month: string) {

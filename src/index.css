@@ -337,6 +337,13 @@ textarea {
   padding: 2rem 1rem;
 }
 
+.form-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 0.5rem 0 0;
+  text-align: center;
+}
+
 .filters {
   display: flex;
   gap: 0.5rem;
@@ -849,7 +856,7 @@ textarea {
 
 .list-row {
   display: grid;
-  grid-template-columns: 1fr auto 24px;
+  grid-template-columns: 1fr auto 44px;
   gap: 0.5rem;
   align-items: center;
   padding: 0.35rem 0.25rem;
@@ -877,10 +884,11 @@ textarea {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
   line-height: 1;
   padding: 0;
-  min-height: 24px;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .list-row-del:hover {

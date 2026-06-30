@@ -37,10 +37,14 @@ async function runSeed(): Promise<{
   const seedVersion = settings.seedVersion ?? 0
   const count = await db.expenses.count()
 
-  const versionStale = seedVersion < CURRENT_SEED_VERSION
-  const looksDuplicated = count > EXPECTED_SEED_COUNT + 5
+  // Already seeded for this version — never wipe user data.
+  if (seedVersion >= CURRENT_SEED_VERSION) {
+    return { seeded: false, expenses: 0, totalChf: 0 }
+  }
 
-  if (!versionStale && !looksDuplicated) {
+  // Version bump but user already has data — keep it, just mark current.
+  if (count > 0) {
+    await updateSettings({ seedVersion: CURRENT_SEED_VERSION })
     return { seeded: false, expenses: 0, totalChf: 0 }
   }
 

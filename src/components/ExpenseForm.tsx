@@ -22,6 +22,8 @@ export function ExpenseForm({ onSaved, refreshKey, active }: ExpenseFormProps) {
   const [showDate, setShowDate] = useState(false)
   const [category, setCategory] = useState('')
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [savedFlash, setSavedFlash] = useState(false)
 
   useEffect(() => {
     if (active && !dateTouched) {
@@ -31,8 +33,17 @@ export function ExpenseForm({ onSaved, refreshKey, active }: ExpenseFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setFormError(null)
+
     const parsed = parseFloat(amount.replace(',', '.'))
-    if (!parsed || parsed <= 0 || !category.trim()) return
+    if (!amount.trim() || !parsed || parsed <= 0) {
+      setFormError('enter an amount')
+      return
+    }
+    if (!category.trim()) {
+      setFormError('enter a category')
+      return
+    }
 
     const entryDate = dateTouched ? date : todayIso()
 
@@ -51,7 +62,12 @@ export function ExpenseForm({ onSaved, refreshKey, active }: ExpenseFormProps) {
       setDateTouched(false)
       setDate(todayIso())
       setShowDate(false)
+      setSavedFlash(true)
+      setTimeout(() => setSavedFlash(false), 1500)
       onSaved()
+    } catch (err) {
+      console.error('[save]', err)
+      setFormError('could not save — try again')
     } finally {
       setSaving(false)
     }
@@ -120,8 +136,9 @@ export function ExpenseForm({ onSaved, refreshKey, active }: ExpenseFormProps) {
         </div>
 
         <button className="btn btn-primary btn-block" type="submit" disabled={saving}>
-          {saving ? 'saving...' : 'save'}
+          {saving ? 'saving...' : savedFlash ? 'saved ✓' : 'save'}
         </button>
+        {formError && <p className="form-error">{formError}</p>}
       </form>
 
       <AddMonthSummary refreshKey={refreshKey} />
