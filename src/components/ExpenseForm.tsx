@@ -88,7 +88,6 @@ export function ExpenseForm({ onSaved, refreshKey, active }: ExpenseFormProps) {
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              autoFocus
               required
             />
             <CurrencySelect value={currency} onChange={setCurrency} />
