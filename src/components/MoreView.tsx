@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { getSettings, updateSettings } from '../lib/db'
-import { daysSince } from '../lib/calculations'
+import { getSettings } from '../lib/db'
+import { formatDate, daysSince } from '../lib/calculations'
 import { exportJsonBackup } from '../lib/export'
+import { forceRefreshFxRates } from '../lib/fx'
 import type { Settings } from '../lib/types'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { InstallNote } from './InstallNote'
@@ -11,14 +12,22 @@ interface MoreViewProps {
   refreshKey: number
   onImported: () => void
   onBackupComplete: () => void
+  onRatesUpdated?: () => void
 }
 
-export function MoreView({ refreshKey, onImported, onBackupComplete }: MoreViewProps) {
+export function MoreView({
+  refreshKey,
+  onImported,
+  onBackupComplete,
+  onRatesUpdated,
+}: MoreViewProps) {
   const settings = useLiveQuery(() => getSettings(), [refreshKey], {
     id: 'app',
     eurToChfRate: 0.95,
     usdToChfRate: 0.88,
     gbpToChfRate: 1.12,
+    fxRatesUpdatedAt: null,
+    fxRatesDate: null,
     lastBackupAt: null,
     foodBudget: 1000,
     seededAt: null,
@@ -27,15 +36,21 @@ export function MoreView({ refreshKey, onImported, onBackupComplete }: MoreViewP
     fixedCostMonthlyNote: null,
   } as Settings)
 
-  const [eurRate, setEurRate] = useState('')
-  const [usdRate, setUsdRate] = useState('')
-  const [gbpRate, setGbpRate] = useState('')
   const [exporting, setExporting] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [refreshingRates, setRefreshingRates] = useState(false)
+  const [ratesMsg, setRatesMsg] = useState<string | null>(null)
 
   const backupDays = daysSince(settings.lastBackupAt)
   const backupLabel =
     backupDays === null ? 'never' : backupDays === 0 ? '0 days ago' : `${backupDays} days ago`
+
+  const ratesAge = daysSince(settings.fxRatesUpdatedAt)
+  const ratesAgeLabel =
+    ratesAge === null
+      ? 'not fetched yet'
+      : ratesAge === 0
+        ? 'today'
+        : `${ratesAge} day${ratesAge === 1 ? '' : 's'} ago`
 
   async function handleExport() {
     setExporting(true)
@@ -47,18 +62,21 @@ export function MoreView({ refreshKey, onImported, onBackupComplete }: MoreViewP
     }
   }
 
-  async function handleSaveSettings(e: React.FormEvent) {
-    e.preventDefault()
-    const patch: Partial<Settings> = {}
-    if (eurRate) patch.eurToChfRate = parseFloat(eurRate)
-    if (usdRate) patch.usdToChfRate = parseFloat(usdRate)
-    if (gbpRate) patch.gbpToChfRate = parseFloat(gbpRate)
-    await updateSettings(patch)
-    setEurRate('')
-    setUsdRate('')
-    setGbpRate('')
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  async function handleRefreshRates() {
+    setRefreshingRates(true)
+    setRatesMsg(null)
+    try {
+      const ok = await forceRefreshFxRates()
+      if (ok) {
+        onRatesUpdated?.()
+        setRatesMsg('rates updated')
+      } else {
+        setRatesMsg('offline — using cached rates')
+      }
+    } finally {
+      setRefreshingRates(false)
+      setTimeout(() => setRatesMsg(null), 2500)
+    }
   }
 
   return (
@@ -87,46 +105,36 @@ export function MoreView({ refreshKey, onImported, onBackupComplete }: MoreViewP
       </div>
 
       <div className="card">
-        <p className="section-title">settings</p>
-        <form onSubmit={handleSaveSettings}>
-          <div className="field">
-            <label>eur → chf (new entries)</label>
-            <input
-              className="input"
-              type="number"
-              step="0.01"
-              placeholder={String(settings.eurToChfRate)}
-              value={eurRate}
-              onChange={(e) => setEurRate(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>usd → chf (new entries)</label>
-            <input
-              className="input"
-              type="number"
-              step="0.01"
-              placeholder={String(settings.usdToChfRate)}
-              value={usdRate}
-              onChange={(e) => setUsdRate(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>gbp → chf (new entries)</label>
-            <input
-              className="input"
-              type="number"
-              step="0.01"
-              placeholder={String(settings.gbpToChfRate)}
-              value={gbpRate}
-              onChange={(e) => setGbpRate(e.target.value)}
-            />
-          </div>
-          <button className="btn btn-block" type="submit">
-            save settings
-          </button>
-          {saved && <p style={{ color: 'var(--accent)', fontSize: 12 }}>saved</p>}
-        </form>
+        <p className="section-title">exchange rates</p>
+        <p className="rates-note">auto-updated daily (ECB via frankfurter.app)</p>
+        <ul className="rates-list">
+          <li>
+            <span>1 EUR</span>
+            <span className="amount">= {settings.eurToChfRate.toFixed(4)} CHF</span>
+          </li>
+          <li>
+            <span>1 USD</span>
+            <span className="amount">= {settings.usdToChfRate.toFixed(4)} CHF</span>
+          </li>
+          <li>
+            <span>1 GBP</span>
+            <span className="amount">= {settings.gbpToChfRate.toFixed(4)} CHF</span>
+          </li>
+        </ul>
+        <p className="rates-meta">
+          {settings.fxRatesDate
+            ? `ecb date: ${formatDate(settings.fxRatesDate)} · checked ${ratesAgeLabel}`
+            : `checked ${ratesAgeLabel}`}
+        </p>
+        <button
+          className="btn btn-block"
+          type="button"
+          onClick={handleRefreshRates}
+          disabled={refreshingRates}
+        >
+          {refreshingRates ? 'refreshing...' : 'refresh rates now'}
+        </button>
+        {ratesMsg && <p className="rates-msg">{ratesMsg}</p>}
       </div>
     </div>
   )

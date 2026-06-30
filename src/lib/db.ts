@@ -14,6 +14,8 @@ export const DEFAULT_SETTINGS: Settings = {
   eurToChfRate: 0.95,
   usdToChfRate: 0.88,
   gbpToChfRate: 1.12,
+  fxRatesUpdatedAt: null,
+  fxRatesDate: null,
   lastBackupAt: null,
   foodBudget: 1000,
   seededAt: null,

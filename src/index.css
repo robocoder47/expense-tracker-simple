@@ -378,6 +378,45 @@ textarea {
   color: var(--accent);
 }
 
+.rates-note {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin: 0 0 0.75rem;
+}
+
+.rates-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.rates-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rates-list li:last-child {
+  border-bottom: none;
+}
+
+.rates-meta {
+  color: var(--text-muted);
+  font-size: 10px;
+  margin: 0 0 0.75rem;
+}
+
+.rates-msg {
+  color: var(--accent);
+  font-size: 12px;
+  margin: 0.5rem 0 0;
+  text-align: center;
+}
+
 /* dashboard */
 .dashboard-hero {
   text-align: center;

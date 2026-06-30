@@ -36,6 +36,10 @@ export interface Settings {
   eurToChfRate: number
   usdToChfRate: number
   gbpToChfRate: number
+  /** When we last fetched live FX rates. */
+  fxRatesUpdatedAt: string | null
+  /** ECB date from the rates provider (YYYY-MM-DD). */
+  fxRatesDate: string | null
   lastBackupAt: string | null
   foodBudget: number
   seededAt: string | null

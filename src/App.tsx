@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { registerSW } from 'virtual:pwa-register'
 import { ensureDefaults, getSettings } from './lib/db'
+import { refreshFxRatesIfNeeded } from './lib/fx'
 import { seedInitialDataIfNeeded } from './lib/seed'
 import { daysSince } from './lib/calculations'
 import { exportJsonBackup } from './lib/export'
@@ -49,6 +50,7 @@ export default function App() {
           setTimeout(() => setToast(null), 4000)
         }
         await requestPersistentStorage()
+        await refreshFxRatesIfNeeded()
         const settings = await getSettings()
         const days = daysSince(settings.lastBackupAt)
         setShowStaleBanner(
@@ -64,6 +66,16 @@ export default function App() {
       }
     }
     init()
+  }, [])
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') {
+        refreshFxRatesIfNeeded()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   async function handleBannerExport() {
@@ -107,6 +119,7 @@ export default function App() {
             refreshKey={refreshKey}
             onImported={refresh}
             onBackupComplete={handleBackupComplete}
+            onRatesUpdated={refresh}
           />
         )}
       </main>
