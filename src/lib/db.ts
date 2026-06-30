@@ -12,6 +12,8 @@ import type {
 export const DEFAULT_SETTINGS: Settings = {
   id: 'app',
   eurToChfRate: 0.95,
+  usdToChfRate: 0.88,
+  gbpToChfRate: 1.12,
   lastBackupAt: null,
   foodBudget: 1000,
   seededAt: null,
@@ -83,7 +85,7 @@ export async function addExpense(
     createdAt: input.createdAt ?? new Date().toISOString(),
     chfValue:
       input.chfValue ??
-      computeChfValue(input.amount, input.currency, settings.eurToChfRate),
+      computeChfValue(input.amount, input.currency, settings),
   }
   await db.expenses.add(expense)
   await touchCategory(expense.category)
@@ -107,7 +109,7 @@ export async function updateExpense(
     ...existing,
     ...patch,
     chfValue: amountOrCurrencyChanged
-      ? computeChfValue(amount, currency, settings.eurToChfRate)
+      ? computeChfValue(amount, currency, settings)
       : existing.chfValue,
   }
   await db.expenses.put(updated)
@@ -168,7 +170,7 @@ export async function bulkImportExpenses(rows: ParsePreviewRow[]): Promise<numbe
       chfValue: computeChfValue(
         row.amount,
         row.currency ?? 'CHF',
-        settings.eurToChfRate,
+        settings,
       ),
     })
   }
@@ -204,7 +206,7 @@ export async function commitImportRows(rows: ParsePreviewRow[]): Promise<{
         chfValue: computeChfValue(
           row.amount,
           row.currency ?? 'CHF',
-          settings.eurToChfRate,
+          settings,
         ),
       })
       expenses++

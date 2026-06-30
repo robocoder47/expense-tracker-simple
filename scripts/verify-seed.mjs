@@ -4,7 +4,7 @@ import { computeChfValue } from '../src/lib/calculations.ts'
 
 const text = fs.readFileSync('./src/data/seed-2026.txt', 'utf8')
 const rows = getValidCommitRows(parseNotes(text)).filter((r) => r.type === 'expense')
-const rate = 0.95
+const rate = { eurToChfRate: 0.95, usdToChfRate: 0.88, gbpToChfRate: 1.12 }
 
 const byMonth = new Map()
 let total = 0

@@ -45,6 +45,24 @@ function parseAmountCurrency(line: string): {
     }
   }
 
+  const usdAfter = line.match(/^(\d+(?:\.\d+)?)\s*(?:\$|usd)\s*(.*)$/i)
+  if (usdAfter) {
+    return {
+      amount: parseFloat(usdAfter[1]),
+      currency: 'USD',
+      rest: usdAfter[2].trim(),
+    }
+  }
+
+  const gbpAfter = line.match(/^(\d+(?:\.\d+)?)\s*(?:£|gbp)\s*(.*)$/i)
+  if (gbpAfter) {
+    return {
+      amount: parseFloat(gbpAfter[1]),
+      currency: 'GBP',
+      rest: gbpAfter[2].trim(),
+    }
+  }
+
   const euroBefore = line.match(/^(\d+(?:\.\d+)?)\s*(.+?)\s*€\s*$/i)
   if (euroBefore) {
     return {

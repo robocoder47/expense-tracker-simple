@@ -106,6 +106,8 @@ export function CurrencySelect({
     <select className="select select-inline" value={value} onChange={(e) => onChange(e.target.value as Currency)}>
       <option value="CHF">CHF</option>
       <option value="EUR">EUR</option>
+      <option value="USD">USD</option>
+      <option value="GBP">GBP</option>
     </select>
   )
 }

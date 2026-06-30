@@ -1,12 +1,22 @@
-import type { Currency, Expense, FixedCost } from './types'
+import type { Currency, Expense, FixedCost, Settings } from './types'
+
+export type FxRates = Pick<Settings, 'eurToChfRate' | 'usdToChfRate' | 'gbpToChfRate'>
 
 export function computeChfValue(
   amount: number,
   currency: Currency,
-  eurToChfRate: number,
+  rates: FxRates,
 ): number {
-  if (currency === 'CHF') return roundChf(amount)
-  return roundChf(amount * eurToChfRate)
+  switch (currency) {
+    case 'CHF':
+      return roundChf(amount)
+    case 'EUR':
+      return roundChf(amount * rates.eurToChfRate)
+    case 'USD':
+      return roundChf(amount * rates.usdToChfRate)
+    case 'GBP':
+      return roundChf(amount * rates.gbpToChfRate)
+  }
 }
 
 export function roundChf(value: number): number {
@@ -17,11 +27,10 @@ export function sumChf(expenses: Expense[]): number {
   return roundChf(expenses.reduce((sum, e) => sum + e.chfValue, 0))
 }
 
-export function monthlyFixedBurn(fixedCosts: FixedCost[], eurToChfRate: number): number {
+export function monthlyFixedBurn(fixedCosts: FixedCost[], rates: FxRates): number {
   return roundChf(
     fixedCosts.reduce((sum, fc) => {
-      const chf =
-        fc.currency === 'CHF' ? fc.amount : fc.amount * eurToChfRate
+      const chf = computeChfValue(fc.amount, fc.currency, rates)
       const monthly = fc.interval === 'yearly' ? chf / 12 : chf
       return sum + monthly
     }, 0),

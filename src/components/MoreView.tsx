@@ -17,6 +17,8 @@ export function MoreView({ refreshKey, onImported, onBackupComplete }: MoreViewP
   const settings = useLiveQuery(() => getSettings(), [refreshKey], {
     id: 'app',
     eurToChfRate: 0.95,
+    usdToChfRate: 0.88,
+    gbpToChfRate: 1.12,
     lastBackupAt: null,
     foodBudget: 1000,
     seededAt: null,
@@ -25,7 +27,9 @@ export function MoreView({ refreshKey, onImported, onBackupComplete }: MoreViewP
     fixedCostMonthlyNote: null,
   } as Settings)
 
-  const [rate, setRate] = useState('')
+  const [eurRate, setEurRate] = useState('')
+  const [usdRate, setUsdRate] = useState('')
+  const [gbpRate, setGbpRate] = useState('')
   const [exporting, setExporting] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -46,9 +50,13 @@ export function MoreView({ refreshKey, onImported, onBackupComplete }: MoreViewP
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault()
     const patch: Partial<Settings> = {}
-    if (rate) patch.eurToChfRate = parseFloat(rate)
+    if (eurRate) patch.eurToChfRate = parseFloat(eurRate)
+    if (usdRate) patch.usdToChfRate = parseFloat(usdRate)
+    if (gbpRate) patch.gbpToChfRate = parseFloat(gbpRate)
     await updateSettings(patch)
-    setRate('')
+    setEurRate('')
+    setUsdRate('')
+    setGbpRate('')
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -82,14 +90,36 @@ export function MoreView({ refreshKey, onImported, onBackupComplete }: MoreViewP
         <p className="section-title">settings</p>
         <form onSubmit={handleSaveSettings}>
           <div className="field">
-            <label>eur → chf rate (new entries only)</label>
+            <label>eur → chf (new entries)</label>
             <input
               className="input"
               type="number"
               step="0.01"
               placeholder={String(settings.eurToChfRate)}
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
+              value={eurRate}
+              onChange={(e) => setEurRate(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>usd → chf (new entries)</label>
+            <input
+              className="input"
+              type="number"
+              step="0.01"
+              placeholder={String(settings.usdToChfRate)}
+              value={usdRate}
+              onChange={(e) => setUsdRate(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>gbp → chf (new entries)</label>
+            <input
+              className="input"
+              type="number"
+              step="0.01"
+              placeholder={String(settings.gbpToChfRate)}
+              value={gbpRate}
+              onChange={(e) => setGbpRate(e.target.value)}
             />
           </div>
           <button className="btn btn-block" type="submit">

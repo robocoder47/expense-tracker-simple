@@ -1,4 +1,4 @@
-export type Currency = 'CHF' | 'EUR'
+export type Currency = 'CHF' | 'EUR' | 'USD' | 'GBP'
 
 export type ExpenseSource = 'manual' | 'import' | 'fixed'
 
@@ -34,6 +34,8 @@ export interface Category {
 export interface Settings {
   id: 'app'
   eurToChfRate: number
+  usdToChfRate: number
+  gbpToChfRate: number
   lastBackupAt: string | null
   foodBudget: number
   seededAt: string | null

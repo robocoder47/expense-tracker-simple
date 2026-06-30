@@ -99,7 +99,7 @@ export function StatsView({ refreshKey }: StatsViewProps) {
         <div className="dashboard-hero-label">avg monthly</div>
         <div className="dashboard-hero-value amount">{formatChf(avgMonthly)}</div>
         <p className="chart-subtitle" style={{ marginTop: '0.35rem' }}>
-          {expenses.length} entries · totals use stored CHF (EUR × rate at entry)
+          {expenses.length} entries · totals in CHF (foreign amounts converted at entry)
         </p>
         <div className="dashboard-hero-sub">
           <div className="dashboard-hero-sub-row">
